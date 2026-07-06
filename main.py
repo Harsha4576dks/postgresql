@@ -52,18 +52,10 @@ async def create_questions(question:QuestionBase, db:db_dependency):
 
 @app.delete("/questions/{question_id}")
 async def delete_questions(question_id: int, db: db_dependency):
-
     question = db.query(models.Questions).filter(models.Questions.id == question_id).first()
-
     if not question:
-        raise HTTPException(status_code=404,detail="Question not found")
-
-    # Delete all choices belonging to this question
-    db.query(models.Choices).filter(models.Choices.question_id == question_id).delete()
-
-    # Now delete the question
+        raise HTTPException(status_code=404,detail="Question not found")    
+    db.query(models.Choices).filter(models.Choices.question_id == question_id).delete()    
     db.delete(question)
-
     db.commit()
-
     return {"message": "Question deleted successfully","deleted_question": {"id": question.id,"question_text": question.question_text } }
