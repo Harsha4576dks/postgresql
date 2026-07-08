@@ -29,3 +29,24 @@ def get_db():
         db.close()
 
 db_dependency  = Annotated[Session, Depends(get_db)]
+
+@app.post("/users/")
+async def create_users(user:UserBase, db:db_dependency):
+    db_user = models.User(name=user.name, salary=user.salary)
+    db.add(db_user)    
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.post("/expenses/")
+async def create_expense(expense:ExpenseBase, db:db_dependency):
+    db_user = db.query(models.User).filter(models.User.id == expense.user_id).first()
+
+    if db_user is None:
+        raise HTTPException(status_code=404,detail="User not found")
+    
+    db_expense = models.Expense(date=expense.date, description=expense.description, payment_method=expense.payment_method, amount_spent=expense.amount_spent, user_id=expense.user_id)
+    db.add(db_expense)
+    db.commit()
+    db.refresh(db_expense)
+    return db_expense

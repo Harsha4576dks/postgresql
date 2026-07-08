@@ -10,7 +10,7 @@ class Expense(Base):
     description = Column(String, index=True)
     payment_method = Column(String, index=True)
     amount_spent = Column(Integer, index=True)
-    User_id = Column(Integer, ForeignKey("user_data.id"))
+    user_id = Column(Integer, ForeignKey("user_data.id"))
     user = relationship("User", back_populates="expenses")
 
 class User(Base):
