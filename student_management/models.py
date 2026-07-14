@@ -9,7 +9,7 @@ class Student(Base):
     name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
     department = Column(String, index=True)
-    phone = Column(Integer, index=True)
+    phone = Column(String, index=True)
     enrollments = relationship("Enrollment", back_populates="student")
 
 class Course(Base):
