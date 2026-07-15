@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
-from typing import List, Annotated
+from typing import List, Annotated,Optional
 from . import models
 from . database import engine, SessionLocal
 from sqlalchemy.orm import Session
@@ -28,6 +28,16 @@ class AttendanceBase(BaseModel):
 class EnrollmentBase(BaseModel):
     student_id:int
     course_id:int
+
+class UpdateStudent(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    department: Optional[str] = None
+    phone: Optional[str] = None
+
+class UpdateCourse(BaseModel):
+    course_name: Optional[str] = None
+    duration: Optional[str] = None
 
 def get_db():
     db = SessionLocal()
@@ -154,3 +164,70 @@ async def search_by_specification(student_id:int,course_id:int, db:db_dependency
          raise HTTPException(status_code=404, detail="No attendance found for this student on this course")
     return result
 
+# @app.patch("/students/{student_id}")
+# async def update_student_details(student_id:int, student:UpdateStudent, db:db_dependency):
+#     db_student = db.query(models.Student).filter(models.Student.id == student_id).first()
+#     if db_student is None:
+#         raise HTTPException(status_code=404, detail="student not found")
+   
+#     for key, value in StudentBase.model_dump(exclude_unset=True).items():
+#         if value is not None:
+#             StudentBase[student_id][key] = value
+
+#     db.commit()
+#     db.refresh(db_student)
+#     return db_student
+
+@app.delete("/attendance/{attendance_id}")
+async def delete_attendance(attendance_id:int, db:db_dependency):
+    db_attendance = db.query(models.Attendance).filter(models.Attendance.id == attendance_id).first()
+    if db_attendance is None:
+        raise HTTPException(status_code=404, detail="attendance record  not found")
+    db.delete(db_attendance)
+    db.commit()
+    return {"message":"attendance details deleted successfullly", "deleted_attendance":db_attendance.id}
+
+@app.delete("/enrollment/{enrollment_id}")
+async def delete_enrollment(enrollment_id:int, db:db_dependency):
+    db_enrollment = db.query(models.Enrollment).filter(models.Enrollment.id == enrollment_id).first()
+    if db_enrollment is None:
+        raise HTTPException(status_code=404, detail="no enrollments found on this id")
+    db.delete(db_enrollment)
+    db.commit()
+    return {"message":"enrollments on this id is deleted successfully", "deleted_enrollment":db_enrollment.id}
+
+@app.delete("/courses/{course_id}")
+async def delete_course(course_id:int, db:db_dependency):
+    db_course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if db_course is None:
+        raise HTTPException(status_code=400, detail = "course is not found")
+    
+    db_enrollment = db.query(models.Enrollment).filter(models.Enrollment.course_id == course_id).first()
+    if db_enrollment is not None:
+        raise HTTPException(status_code=400, detail = "delete enrollments for this course first")
+    
+    db_attendance = db.query(models.Attendance).filter(models.Attendance.course_id == course_id).first()
+    if db_attendance is not None:
+        raise HTTPException(status_code=404, detail=" delete attendance for this course first")
+    
+    db.delete(db_course)
+    db.commit()
+    return {"message":"course deleted succesfully", "deleted_course":db_course.id}
+
+@app.delete("/students/{student_id}")
+async def delete_student(student_id:int, db:db_dependency):
+    db_student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if db_student is None:
+        raise HTTPException(status_code=404, detail="student not found")
+    
+    db_enrollment = db.query(models.Enrollment).filter(models.Enrollment.student_id == student_id).first()
+    if db_enrollment is not None:
+        raise HTTPException(status_code=400, detail = "delete enrollments for this student first")
+    
+    db_attendance = db.query(models.Attendance).filter(models.Attendance.sttudent_id == student_id).first()
+    if db_attendance is not None:
+        raise HTTPException(status_code=404, detail=" delete attendance for this student first")
+        
+    db.delete(db_student)
+    db.commit()
+    return {"message":"student deleted successfully", "deleted_student":db_student.id}
