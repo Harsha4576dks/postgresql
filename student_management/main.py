@@ -111,3 +111,46 @@ async def create_attendance(attendance:AttendanceBase, db:db_dependency):
     db.commit()
     db.refresh(db_attendance)
     return (db_attendance)
+
+@app.get("/students/{student_id}")
+async def get_student(student_id:int, db:db_dependency ):
+    result = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not result:
+        raise HTTPException(status_code=404, detail="student not found")
+    return result
+
+@app.get("/students/search/")
+async def search_by_name(student_name:str, db:db_dependency):
+    result = db.query(models.Student).filter(models.Student.name == student_name).all()
+    if not result:
+         raise HTTPException(status_code=404, detail="student not found")
+    return result
+
+@app.get("/courses/{course_id}")
+async def get_course(course_id:int, db:db_dependency):
+    result = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if not result:
+         raise HTTPException(status_code=404, detail="course not found")
+    return result
+
+@app.get("/course/search/")
+async def search_by_name(course_name:str, db:db_dependency):
+    result =  db.query(models.Course).filter(models.Course.course_name == course_name).all()
+    if not result:
+         raise HTTPException(status_code=404, detail="course not found")
+    return result
+
+@app.get("/enrollments/search/")
+async def search_by_enrollment(student_id:int, db:db_dependency):
+    result = db.query(models.Enrollment).filter(models.Enrollment.student_id == student_id).all()
+    if not result:
+         raise HTTPException(status_code=404, detail="no enrollments found on this id")
+    return result
+
+@app.get("/attendances/search/")
+async def search_by_specification(student_id:int,course_id:int, db:db_dependency):
+    result = db.query(models.Attendance).filter(models.Attendance.student_id == student_id , models.Attendance.course_id == course_id).first()
+    if not result:
+         raise HTTPException(status_code=404, detail="No attendance found for this student on this course")
+    return result
+
