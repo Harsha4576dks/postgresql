@@ -39,6 +39,11 @@ class UpdateCourse(BaseModel):
     course_name: Optional[str] = None
     duration: Optional[str] = None
 
+class UpdateEnrollment(BaseModel):
+    student_id:Optional[str] = None
+    course_id:Optional[str] = None
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -164,19 +169,50 @@ async def search_by_specification(student_id:int,course_id:int, db:db_dependency
          raise HTTPException(status_code=404, detail="No attendance found for this student on this course")
     return result
 
-# @app.patch("/students/{student_id}")
-# async def update_student_details(student_id:int, student:UpdateStudent, db:db_dependency):
-#     db_student = db.query(models.Student).filter(models.Student.id == student_id).first()
-#     if db_student is None:
-#         raise HTTPException(status_code=404, detail="student not found")
+@app.patch("/students/{student_id}")
+async def update_student_details(student_id:int, student:UpdateStudent, db:db_dependency):
+     db_student = db.query(models.Student).filter(models.Student.id == student_id).first()
+     if db_student is None:
+         raise HTTPException(status_code=404, detail="student not found")
    
-#     for key, value in StudentBase.model_dump(exclude_unset=True).items():
-#         if value is not None:
-#             StudentBase[student_id][key] = value
+     update_data = student.model_dump(exclude_unset=True)
+     print(update_data)
+     for key, value in update_data.items():
+         setattr(db_student, key, value)
 
-#     db.commit()
-#     db.refresh(db_student)
-#     return db_student
+     db.commit()
+     db.refresh(db_student)
+     return db_student
+
+@app.patch("/courses/{course_id}")
+async def update_course_details(course_id:int, course:UpdateCourse, db:db_dependency):
+    db_course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    if db_course is None:
+        raise HTTPException(status_code=404, detail="course not found")
+    
+    update_data = course.model_dump(exclude_unset=True)
+    print(update_data)
+    for key, value in update_data.items():
+        setattr(db_course, key, value)
+
+        db.commit()
+        db.refresh(db_course)
+        return db_course
+    
+@app.patch("/enrollments/{enrollment_id}")
+async def update_enrollment_details(enrollment_id:int, enrollment:UpdateEnrollment, db:db_dependency):
+    db_enrollment = db.query(models.Enrollment).filter(models.Enrollment.id == enrollment_id).first()
+    if db_enrollment is None:
+        raise HTTPException(status_code=404, detail="no enrollments found")
+    
+    update_data = enrollment.model_dump(exclude_unset=True)
+    print(update_data)
+    for key, value in update_data.items():
+        setattr(db_enrollment, key, value)
+
+        db.commit()
+        db.refresh(db_enrollment)
+        return db_enrollment
 
 @app.delete("/attendance/{attendance_id}")
 async def delete_attendance(attendance_id:int, db:db_dependency):
