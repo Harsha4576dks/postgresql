@@ -51,6 +51,26 @@ class ReviewBase(BaseModel):
     ratings:float
     review_date:date
 
+class UpdateRoom(BaseModel):
+    room_number:Optional[int]  = None
+    room_type:Optional[str] = None
+    availability:Optional[bool] = None
+    price_per_day:Optional[int] = None
+    capacity:Optional[int] = None
+
+class UpdateCustomer(BaseModel):
+    customer_name:Optional[str] = None
+    phone:Optional[int] = None
+    email:Optional[str] = None
+    address:Optional[str] = None
+
+class UpdateBooking(BaseModel):
+    booking_status:Optional[bool]  = None
+    check_in_date:Optional[date] = None
+    check_out_date:Optional[date] = None
+    customer_id:Optional[int] = None
+    room_id:Optional[int] = None
+
 def get_db():
     db = SessionLocal()
     try:
@@ -217,3 +237,69 @@ async def get_reviews(review_id:int, db:db_dependency):
         raise HTTPException(status_code=404, detail="no reviews from this id")
     return result
 
+@app.patch("/rooms/{room_id}")
+async def update_room_details(room_id:int, room:UpdateRoom, db:db_dependency):
+    db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
+    if db_room is None:
+        raise HTTPException(status_code=404, detail="room not found")
+    
+    update_data = room.model_dump(exclude_unset=True)
+    print(update_data)
+    for key, value in update_data.items():
+        setattr(db_room, key, value)
+
+    db.commit()
+    db.refresh(db_room)
+    return db_room
+
+@app.patch("/customers/{customer_id}")
+async def update_customer_details(customer_id:int, customer:UpdateCustomer, db:db_dependency):
+    db_customer = db.query(models.Customer).filter(models.Customer.id == customer_id).first()
+    if db_customer is None:
+        raise HTTPException(status_code=404, detail="customer not found")
+    
+    update_data = customer.model_dump(exclude_unset=True)
+    print(update_data)
+    for key, value in update_data.items():
+        setattr(db_customer, key, value)
+
+    db.commit()
+    db.refresh(db_customer)
+    return db_customer
+ 
+@app.patch("/bookings/{booking_id}")
+async def update_booking_details(booking_id: int, booking: UpdateBooking, db: db_dependency):
+    db_booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
+    if db_booking is None:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if booking.customer_id is not None:
+        db_customer = db.query(models.Customer).filter(models.Customer.id == booking.customer_id).first()
+        if db_customer is None:
+            raise HTTPException(status_code=404, detail="Customer not found")
+
+    if booking.room_id is not None:
+        db_room = db.query(models.Room).filter(models.Room.id == booking.room_id).first()
+        if db_room is None:
+            raise HTTPException(status_code=404, detail="Room not found")
+        if not db_room.availability:
+            raise HTTPException(status_code=400,detail="Room is already occupied")
+
+    update_data = booking.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_booking, key, value)
+
+    if db_booking.check_out_date <= db_booking.check_in_date:
+        raise HTTPException(status_code=400,detail="Check-out date must be after check-in date.")
+
+    db_room = db.query(models.Room).filter(models.Room.id == db_booking.room_id).first()
+
+    days = (db_booking.check_out_date - db_booking.check_in_date).days
+    db_booking.total_amount = days * db_room.price_per_day
+
+    if db_booking.booking_status in ["Cancelled", "Completed"]:
+        db_room.availability = True
+
+    db.commit()
+    db.refresh(db_booking)
+    return db_booking
