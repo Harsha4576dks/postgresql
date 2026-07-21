@@ -19,7 +19,7 @@ class Room(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     room_number = Column(Integer, index=True)
-    type = Column(String, index=True)
+    room_type = Column(String, index=True)
     availability = Column(Boolean, index=True)
     price_per_day = Column(Integer, index=True)
     capacity = Column(Integer, index=True)
