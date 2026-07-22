@@ -303,3 +303,78 @@ async def update_booking_details(booking_id: int, booking: UpdateBooking, db: db
     db.commit()
     db.refresh(db_booking)
     return db_booking
+
+@app.delete("/hotel/{hotel_id}")
+async def delete_hotel(hotel_id:int, db:db_dependency):
+    db_hotel = db.query(models.Hotel).filter(models.Hotel.id == hotel_id).first()
+    if db_hotel is None:
+        raise HTTPException(status_code=404, detail="hotel not found")
+    
+    db_rooms =  db.query(models.Room).filter(models.Room.hotel_id == hotel_id).all()
+    if db_rooms:
+        raise HTTPException(status_code=400, detail="delete all the rooms belonging to this hotel first")
+   
+    db.delete(db_hotel)
+    db.commit()
+    return {"message":"This hotel details is successfully deleted", "deleted_hotel":hotel_id}
+
+@app.delete("/rooms/{room_id}")
+async def delete_rooms(room_id:int, db:db_dependency):
+    db_room = db.query(models.Room).filter(models.Room.id == room_id).first()
+    if db_room is None:
+            raise HTTPException(status_code=404, detail="rooms not found")
+    
+    db_booking = db.query(models.Booking).filter(models.Booking.room_id == room_id).all()
+    if db_booking:
+        raise HTTPException(status_code=400, detail="This room is having a booking, so delete the booking first")
+    
+    db.delete(db_room)
+    db.commit()
+    return {"message":"room deleted successfully", "deleted_room":room_id}
+
+@app.delete("/bookings/{booking_id}")
+async def delete_booking(booking_id:int, db:db_dependency):
+    db_booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
+    if db_booking is None:
+        raise HTTPException(status_code=404, detail="no bookings found")
+    
+    db_payment = db.query(models.Payment).filter(models.Payment.booking_id == booking_id).all()
+    if db_payment:
+        raise HTTPException(status_code=400, detail="cancel the payments on this room and refund")
+    
+    db.delete(db_booking)
+    db.commit()
+    return {"message":"bookings successfully deleted", "deleted_booking":booking_id}
+
+@app.delete("/customer/{customer_id}")
+async def delete_customer(customer_id:int, db:db_dependency):
+    db_booking = db.query(models.Booking).filter(models.Booking.customer_id == customer_id).first()
+    if db_booking:
+        raise HTTPException(status_code=400,detail="Delete customer's bookings first")
+    db_customer = db.query(models.Customer).filter(models.Customer.id == customer_id).first()
+    if db_customer is None:
+        raise HTTPException(status_code=404, detail="customer not found")
+    
+    db.delete(db_customer)
+    db.commit()
+    return {"message":"customer details deleted successfully", "deleted_customer":customer_id}
+
+@app.delete("/payments/{payment_id}")
+async def delete_payments(payment_id:int, db:db_dependency):
+    db_payment = db.query(models.Payment).filter(models.Payment.id == payment_id).first()
+    if db_payment is None:
+        raise HTTPException(status_code=404, detail="payment not found")
+    
+    db.delete(db_payment)
+    db.commit()
+    return {"message":"payment details deleted successfully", "deleted_payment":payment_id}
+
+@app.delete("/reviews/{review_id}")
+async def delete_review(review_id:int, db:db_dependency):
+    db_review = db.query(models.Review).filter(models.Review.id == review_id).first()
+    if db_review  is None:
+        raise HTTPException(status_code=404, detail="review not found")
+    
+    db.delete(db_review)
+    db.commit()
+    return {"message":"review details deleted successfully", "deleted_review":db_review.id}
